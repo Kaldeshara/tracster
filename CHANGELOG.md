@@ -4,7 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 1.2.8 - Unreleased
+## 1.3.0 - 2026-11-16
+
+### Changed
+- UX/UI overhaul by Kaldeshara. See https://github.com/Lokhozt/tracster/commit/3ad49ee683b3aea3808e991be42bac2a0fd3b84c
+
+## 1.2.8 - 2026-11-11
 
 ### Added
 - Documents, **Trac Bar**: admins can show past parties since 1 September (read-only bar slots) via a checkbox on that section.
