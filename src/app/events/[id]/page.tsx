@@ -1,19 +1,20 @@
 import Link from "next/link";
+import { CreateSheetMenuItem, FloatingActionButton } from "@/components/FloatingActionButton";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import { ViewTransition } from "react";
 import { AppShell } from "@/components/AppShell";
 import { AvailabilityButtons } from "@/components/AvailabilityButtons";
 import { ManualAvailabilityCheckButton } from "@/components/ManualAvailabilityCheckButton";
 import {
-  AssignEventParticipantForm,
+  AddEventParticipants,
   EventParticipantsList,
 } from "@/components/EventForms";
 import { JoinAsParticipantControls } from "@/components/JoinAsParticipantControls";
 import { JoinRequestsList } from "@/components/JoinRequestsList";
-import { LocalDateTime } from "@/components/LocalDateTime";
+import { NextUpCard } from "@/components/NextUpCard";
 import { RepresentationChoreographiesSection } from "@/components/RepresentationForms";
 import { Card } from "@/components/ui";
-import { cn } from "@/lib/utils";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { canEditEvent, canViewEvent, serializeEvent } from "@/lib/events";
@@ -38,9 +39,8 @@ import {
 } from "@/lib/users";
 import { getServerTranslator } from "@/i18n/server";
 import { isAtLeastManager } from "@/lib/roles";
-import { PinnedChoreographyResources } from "@/components/PinnedChoreographyResources";
+import { canCreateEvent } from "@/lib/site-settings";
 import { WhatsAppLink } from "@/components/WhatsAppLink";
-import { getPinnedChoreographyResources } from "@/lib/choreography-resources";
 import { isWhatsAppUrl } from "@/lib/whatsapp";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -52,9 +52,10 @@ const statusStyles = {
 } as const;
 
 export default async function EventDetailPage({ params }: PageProps) {
-  const [user, t, serverT] = await Promise.all([
+  const [user, t, tc, serverT] = await Promise.all([
     getCurrentUser(),
     getTranslations("Pages.EventDetail"),
+    getTranslations("Components"),
     getServerTranslator(),
   ]);
   if (!user) {
@@ -67,7 +68,10 @@ export default async function EventDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const canEdit = await canEditEvent(id, user.id);
+  const [canEdit, canCreate] = await Promise.all([
+    canEditEvent(id, user.id),
+    canCreateEvent(user.id),
+  ]);
 
   const [eventRecord, users] = await Promise.all([
     prisma.event.findUnique({
@@ -199,52 +203,89 @@ export default async function EventDetailPage({ params }: PageProps) {
     ),
   ).length;
 
-  const choreographyHref =
-    event.type.kind === "REHEARSAL" && event.choreographyId
-      ? `/choreographies/${event.choreographyId}`
-      : null;
+  // Phones/tablets: edit and duplicate live in the floating "+" button.
+  const eventActions = [
+    ...(canEdit ? [{ href: `/events/${id}/edit`, label: t("editEvent") }] : []),
+    ...(canCreate ? [{ href: `/events/new?copyFrom=${id}`, label: t("duplicateEvent") }] : []),
+  ];
 
-  const pinnedChoreographyResources =
-    event.type.kind === "REHEARSAL" && event.choreographyId
-      ? await getPinnedChoreographyResources(event.choreographyId, user.id)
-      : [];
+  const hasDetails = Boolean(
+    event.choreographyTitle || event.groupName || event.description || event.notes,
+  );
 
   return (
     <AppShell
       title={
+        // Pairs with the title in the planning list: it glides into place on open and back.
+        <ViewTransition name={`event-title-${id}`} share="title-morph">
+          <span>{event.displayTitle}</span>
+        </ViewTransition>
+      }
+      narrow
+      titleActions={
         <>
-          <span className="min-w-0">{event.displayTitle}</span>
           {event.type.kind === "DEMONSTRATION" &&
             event.whatsappUrl &&
             isWhatsAppUrl(event.whatsappUrl) && (
               <WhatsAppLink href={event.whatsappUrl} label={t("openWhatsapp")} />
             )}
+          {/* Desktop: the page's actions on the title row (phones: "Je viens" below, the rest in "+"). */}
+          <div className="hidden items-center gap-2 lg:flex">
+            {generic && (
+          <JoinAsParticipantControls
+            joinUrl={`/api/events/${id}/join`}
+            requestUrl={`/api/events/${id}/join-requests`}
+            allowJoin={eventRecord.allowParticipantJoin}
+            allowRequest={eventRecord.allowJoinRequests}
+            allowLeave
+            isParticipant={isParticipant}
+            hasPendingRequest={hasPendingRequest}
+            hasUpcomingSeries={event.hasUpcomingSeriesEvents}
+          />
+            )}
+            {canEdit && (
+              <Link
+                href={`/events/${id}/edit`}
+                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-stone-300 bg-white px-4 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+              >
+                {t("editEvent")}
+              </Link>
+            )}
+            {canCreate && (
+              <Link
+                href={`/events/new?copyFrom=${id}`}
+                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-stone-300 bg-white px-4 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+              >
+                {t("duplicateEvent")}
+              </Link>
+            )}
+          </div>
         </>
       }
     >
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        {choreographyHref && (
-          <Link
-            href={choreographyHref}
-            className={cn(
-              "inline-flex min-h-11 items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition",
-              "bg-stone-900 text-white hover:bg-stone-700",
-            )}
-          >
-            {t("openChoreography", { title: event.choreographyTitle ?? "" })}
-          </Link>
-        )}
-        <Link href="/events" className="text-sm text-stone-600 hover:text-stone-900">
-          {t("backToEvents")}
-        </Link>
-      </div>
-
-      <p className="mb-4 text-xs font-medium uppercase tracking-wide text-stone-500">
-        {event.type.name}
-      </p>
+      <FloatingActionButton
+        actions={eventActions}
+        extraItems={[
+          ...(generic && canEdit
+            ? [<CreateSheetMenuItem key="participants" kind="participants" label={tc("addParticipants")} />]
+            : []),
+          ...(party && canEdit && partySlots?.some((slot) => slot === null)
+            ? [
+                <CreateSheetMenuItem
+                  key="bar-volunteers"
+                  kind="bar-volunteers"
+                  label={tc("addBarVolunteers")}
+                />,
+              ]
+            : []),
+          ...(event.type.kind === "REHEARSAL" && canViewRehearsalParticipants && canManualAvailabilityCheck
+            ? [<ManualAvailabilityCheckButton key="check" eventId={eventRecord.id} variant="menuItem" />]
+            : []),
+        ]}
+      />
 
       {generic && (
-        <div className="mb-6">
+        <div className="mb-6 lg:hidden">
           <JoinAsParticipantControls
             joinUrl={`/api/events/${id}/join`}
             requestUrl={`/api/events/${id}/join-requests`}
@@ -258,28 +299,36 @@ export default async function EventDetailPage({ params }: PageProps) {
         </div>
       )}
 
+      {/* When and where: the page's bold element, like "Next up" on the planning. */}
+      <div className="mb-6">
+        <NextUpCard
+          layout="strip"
+          label={event.type.name}
+          startsAt={event.startsAt}
+          endsAt={event.endsAt}
+          showEnd
+          location={event.location}
+        />
+      </div>
+
+      {/* Other details (edit/duplicate: title row on desktop, "+" menu on phones). */}
+      {hasDetails && (
       <Card className="mb-6">
+        {hasDetails && (
         <div className="grid gap-2 text-sm text-stone-600">
-          <p>
-            <span className="font-medium text-stone-900">{t("start")}:</span>{" "}
-            <LocalDateTime value={event.startsAt} />
-          </p>
-          {event.endsAt && (
-            <p>
-              <span className="font-medium text-stone-900">{t("end")}:</span>{" "}
-              <LocalDateTime value={event.endsAt} />
-            </p>
-          )}
-          {event.location && (
-            <p>
-              <span className="font-medium text-stone-900">{t("location")}:</span>{" "}
-              {event.location}
-            </p>
-          )}
           {event.choreographyTitle && (
             <p>
               <span className="font-medium text-stone-900">{t("choreography")}:</span>{" "}
-              {event.choreographyTitle}
+              {event.choreographyId ? (
+                <Link
+                  href={`/choreographies/${event.choreographyId}`}
+                  className="font-medium text-stone-900 underline decoration-stone-300 underline-offset-2 hover:decoration-stone-900"
+                >
+                  {event.choreographyTitle} ›
+                </Link>
+              ) : (
+                event.choreographyTitle
+              )}
             </p>
           )}
           {event.groupName && (
@@ -301,25 +350,8 @@ export default async function EventDetailPage({ params }: PageProps) {
             </p>
           )}
         </div>
-        {canEdit && (
-          <div className="mt-4">
-            <Link
-              href={`/events/${id}/edit`}
-              className={cn(
-                "inline-flex min-h-11 items-center justify-center rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100",
-              )}
-            >
-              {t("editEvent")}
-            </Link>
-          </div>
         )}
       </Card>
-
-      {event.type.kind === "REHEARSAL" && event.choreographyId && (
-        <PinnedChoreographyResources
-          choreographyId={event.choreographyId}
-          resources={pinnedChoreographyResources}
-        />
       )}
 
       {generic && canEdit && (eventRecord.allowJoinRequests || eventRecord.joinRequests.length > 0) && (
@@ -347,8 +379,9 @@ export default async function EventDetailPage({ params }: PageProps) {
       {event.type.kind === "REHEARSAL" && canViewRehearsalParticipants && (
         <Card className="mb-6">
           <h2 className="mb-4 text-lg font-semibold">{t("participantAvailability")}</h2>
+          {/* Phones/tablets: in the floating "+" menu instead. */}
           {canManualAvailabilityCheck && (
-            <div className="mb-4">
+            <div className="mb-4 hidden lg:block">
               <ManualAvailabilityCheckButton eventId={eventRecord.id} />
             </div>
           )}
@@ -427,14 +460,17 @@ export default async function EventDetailPage({ params }: PageProps) {
             currentUserId={user.id}
             canManage={canEdit}
           />
+          {/* Admins fill free bar slots from a sheet (desktop button; "+" menu on phones). */}
           {canEdit && partySlots.some((slot) => slot === null) && (
-            <div className="mt-6 border-t border-stone-100 pt-6">
-              <AssignEventParticipantForm
+            <div className="mt-4 flex justify-end">
+              <AddEventParticipants
                 eventId={id}
+                kind="bar-volunteers"
+                label={tc("addBarVolunteers")}
                 users={users}
                 assignedUserIds={partyBarAssignedUserIds}
                 assignUrl={`/api/events/${id}/bar-slots`}
-                maxSelection={PARTY_BAR_SLOT_COUNT}
+                maxSelection={PARTY_BAR_SLOT_COUNT - partySlots.filter((slot) => slot !== null).length}
               />
             </div>
           )}
@@ -443,15 +479,10 @@ export default async function EventDetailPage({ params }: PageProps) {
 
       {generic && (
         <Card>
-          <h2 className="mb-4 text-lg font-semibold">{t("participants")}</h2>
-          <EventParticipantsList
-            eventId={id}
-            participants={event.participants}
-            canEdit={canEdit}
-          />
-          {canEdit && (
-            <div className="mt-6 border-t border-stone-100 pt-6">
-              <AssignEventParticipantForm
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold">{t("participants")}</h2>
+            {canEdit && (
+              <AddEventParticipants
                 eventId={id}
                 users={
                   eventKindRestrictedToCompetitors(event.type.kind)
@@ -460,8 +491,13 @@ export default async function EventDetailPage({ params }: PageProps) {
                 }
                 assignedUserIds={event.participants.map((p) => p.id)}
               />
-            </div>
-          )}
+            )}
+          </div>
+          <EventParticipantsList
+            eventId={id}
+            participants={event.participants}
+            canEdit={canEdit}
+          />
         </Card>
       )}
 
