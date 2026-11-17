@@ -240,6 +240,7 @@
       "keepOpen": "keep this page open",
       "submit": "Add to the choreography",
       "discard": "Cancel"
+    },
     "Bar": {
       "title": "Bar",
       "filterLabel": "Parties to show",

@@ -8,22 +8,20 @@ import {
   AssignMemberForm,
   ChoreographersList,
   ParticipantsList,
-  RehearsalsSection,
   TransferChoreographyOwnershipForm,
 } from "@/components/ChoreographyForms";
-import { DemonstrationsSection } from "@/components/EventForms";
 import { EditChoreographyForm } from "@/components/CreateChoreographyForm";
 import { GroupsSection } from "@/components/GroupForms";
 import { JoinAsParticipantControls } from "@/components/JoinAsParticipantControls";
 import { JoinRequestsList } from "@/components/JoinRequestsList";
 import { ChoreographyLifecycleActions } from "@/components/ChoreographyLifecycleActions";
-import { RepresentationsSection } from "@/components/RepresentationForms";
 import { ChoreographerBadge } from "@/components/CrownIcon";
 import { ChoreographyResources } from "@/components/ChoreographyResources";
 import { ChoreographyTagsEditor } from "@/components/ChoreographyTagsEditor";
 import { TagBubbles } from "@/components/TagBubbles";
 import { ChoreographyHeaderActions } from "@/components/ChoreographyHeaderActions";
 import { ChoreographyEventActions } from "@/components/ChoreographyEventActions";
+import { ChoreographyEventsSection } from "@/components/ChoreographyEventsSection";
 import { NextUpCard } from "@/components/NextUpCard";
 import {
   ChoreographyOverviewActions,
@@ -219,6 +217,55 @@ export default async function ChoreographyDetailPage({ params }: PageProps) {
   const canViewStatistics = canManageLifecycle || choreography.createdById === user.id;
   const showGroups = canEdit || groups.length > 0;
   const assignedTags = choreography.tags.map((item) => serializeTag(item.tag));
+  const eventGroups = groups.map((group) => ({
+    id: group.id,
+    name: group.name,
+    memberCount: group.members.length,
+  }));
+  const choreographyRehearsals = upcomingFirst(choreography.rehearsals, (rehearsal) => rehearsal, now).map(
+    (rehearsal) => {
+      const targetUserIds = new Set(
+        rehearsal.group
+          ? rehearsal.group.members.map((member) => member.userId)
+          : choreography.members.map(({ userId }) => userId),
+      );
+      const targetAvailabilities = rehearsal.availabilities.filter((item) => targetUserIds.has(item.userId));
+      return {
+        id: rehearsal.id,
+        title: rehearsal.title,
+        startsAt: rehearsal.startsAt.toISOString(),
+        endsAt: rehearsal.endsAt?.toISOString() ?? null,
+        location: displayLocation(rehearsal),
+        groupName: rehearsal.group?.name ?? null,
+        availableNames: targetAvailabilities
+          .filter((item) => item.status === "AVAILABLE")
+          .map((item) => formatUserName(item.user)),
+        unavailableNames: targetAvailabilities
+          .filter((item) => item.status === "UNAVAILABLE")
+          .map((item) => formatUserName(item.user)),
+        hasUpcomingSeriesEvents: hasUpcomingSeriesEvents(rehearsal, rehearsalSeriesSiblings),
+      };
+    },
+  );
+  const choreographyRepresentations = upcomingFirst(representationLinks, (link) => link.event, now).map(
+    (link) => ({
+      id: link.event.id,
+      title: link.event.title || null,
+      startsAt: link.event.startsAt.toISOString(),
+      endsAt: link.event.endsAt?.toISOString() ?? null,
+      location: displayLocation(link.event),
+      locationId: link.event.locationId,
+      notes: link.event.notes,
+    }),
+  );
+  const choreographyDemonstrations = upcomingFirst(demonstrationLinks, (link) => link.event, now).map((link) => ({
+    id: link.event.id,
+    title: link.event.title || null,
+    startsAt: link.event.startsAt.toISOString(),
+    endsAt: link.event.endsAt?.toISOString() ?? null,
+    location: displayLocation(link.event),
+    groupName: link.group?.name ?? null,
+  }));
 
   // The overview "+" (phones/tablets): every "add" of the sections below.
   const overviewAddActions: OverviewAddAction[] = canEdit
@@ -584,95 +631,20 @@ export default async function ChoreographyDetailPage({ params }: PageProps) {
             canAddDemonstration={eventTypes.some((type) => type.kind === "DEMONSTRATION")}
             canViewStatistics={canViewStatistics}
           />
-          <section>
-            <RehearsalsSection
-              actionsInFloatingMenu
-              canViewStatistics={canViewStatistics}
-              choreographyId={id}
-              choreographyTitle={choreography.title}
-              canEdit={canEdit}
-              groups={groups.map((group) => ({
-                id: group.id,
-                name: group.name,
-                memberCount: group.members.length,
-              }))}
-              eventTypes={eventTypes}
-              rehearsals={upcomingFirst(choreography.rehearsals, (rehearsal) => rehearsal, now).map((rehearsal) => {
-                const targetUserIds = new Set(
-                  rehearsal.group
-                    ? rehearsal.group.members.map((member) => member.userId)
-                    : choreography.members.map(({ userId }) => userId),
-                );
-
-                const targetAvailabilities = rehearsal.availabilities.filter((item) =>
-                  targetUserIds.has(item.userId),
-                );
-
-                return {
-                  id: rehearsal.id,
-                  title: rehearsal.title,
-                  startsAt: rehearsal.startsAt.toISOString(),
-                  endsAt: rehearsal.endsAt?.toISOString() ?? null,
-                  location: displayLocation(rehearsal),
-                  groupName: rehearsal.group?.name ?? null,
-                  availableNames: targetAvailabilities
-                    .filter((item) => item.status === "AVAILABLE")
-                    .map((item) => formatUserName(item.user)),
-                  unavailableNames: targetAvailabilities
-                    .filter((item) => item.status === "UNAVAILABLE")
-                    .map((item) => formatUserName(item.user)),
-                  hasUpcomingSeriesEvents: hasUpcomingSeriesEvents(
-                    rehearsal,
-                    rehearsalSeriesSiblings,
-                  ),
-                };
-              })}
-            />
-          </section>
-          {(canEdit || representationLinks.length > 0) && (
-            <section>
-              <RepresentationsSection
-                actionsInFloatingMenu
-                choreographyId={id}
-                canEdit={canEdit}
-                eventTypes={eventTypes}
-                representations={upcomingFirst(representationLinks, (link) => link.event, now).map((link) => ({
-                  id: link.event.id,
-                  title: link.event.title || null,
-                  startsAt: link.event.startsAt.toISOString(),
-                  endsAt: link.event.endsAt?.toISOString() ?? null,
-                  location: displayLocation(link.event),
-                  locationId: link.event.locationId,
-                  notes: link.event.notes,
-                }))}
-              />
-            </section>
-          )}
-          {(canEdit || demonstrationLinks.length > 0) && (
-            <section>
-              <DemonstrationsSection
-                actionsInFloatingMenu
-                choreographyId={id}
-                choreographyTitle={choreography.title}
-                canEdit={canEdit}
-                eventTypes={eventTypes}
-                participantOptions={users}
-                groups={groups.map((group) => ({
-                  id: group.id,
-                  name: group.name,
-                  memberCount: group.members.length,
-                }))}
-                demonstrations={upcomingFirst(demonstrationLinks, (link) => link.event, now).map((link) => ({
-                  id: link.event.id,
-                  title: link.event.title || null,
-                  startsAt: link.event.startsAt.toISOString(),
-                  endsAt: link.event.endsAt?.toISOString() ?? null,
-                  location: displayLocation(link.event),
-                  groupName: link.group?.name ?? null,
-                }))}
-              />
-            </section>
-          )}
+          <ChoreographyEventsSection
+            choreographyId={id}
+            choreographyTitle={choreography.title}
+            canEdit={canEdit}
+            canViewStatistics={canViewStatistics}
+            eventTypes={eventTypes}
+            groups={eventGroups}
+            participantOptions={users}
+            showRepresentations={canEdit || representationLinks.length > 0}
+            showDemonstrations={canEdit || demonstrationLinks.length > 0}
+            rehearsals={choreographyRehearsals}
+            representations={choreographyRepresentations}
+            demonstrations={choreographyDemonstrations}
+          />
         </div>
       ),
     },

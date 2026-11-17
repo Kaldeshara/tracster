@@ -114,6 +114,13 @@ export function scheduleEventEnd(event: { startsAt: string; endsAt: string | nul
   return new Date(start.getTime() + DEFAULT_EVENT_DURATION_MS);
 }
 
+export function isUpcomingScheduleEvent(
+  event: { startsAt: string; endsAt: string | null },
+  now = new Date(),
+) {
+  return scheduleEventEnd(event) >= now;
+}
+
 export function isScheduleEventHappeningNow(
   event: { startsAt: string; endsAt: string | null },
   now = new Date(),

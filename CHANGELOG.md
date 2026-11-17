@@ -4,11 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 1.3.1 - 2026-11-17
 
 ### Added
 - **Bar** tab: the coming parties with bar slots, with your slots and free places at a glance; take or leave a slot with + / −, and tap a party to see who is at the bar.
 - Planning: take a bar slot straight from a party's "＋ Bar 2/3" chip.
+- Android: share a video, photo, audio file or link to TRACker from any app (e.g. the gallery) to add it as a choreography resource, with an upload progress bar.
+- Choreographies -> Events: Added a toggle button to display past events.
 
 ### Changed
 - **Mon activité** moves to the Plus menu; its bar slots tile is removed.
