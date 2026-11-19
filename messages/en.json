@@ -67,6 +67,11 @@
     "adminPrivilegesOn": "Scheduling, settings, and other admin tools are available.",
     "adminPrivilegesOff": "You currently have the same access as a regular member.",
     "adminPrivilegesError": "Unable to update admin privileges.",
+    "birthdayPlanningVisibilityLabel": "Show my birthday on the schedule",
+    "birthdayPlanningVisibilityOn": "Other members can see your birthday on the planning.",
+    "birthdayPlanningVisibilityOff": "Your birthday is hidden from the planning.",
+    "birthdayPlanningVisibilityNoDate": "Add your date of birth (ask an admin) to use this option.",
+    "birthdayPlanningVisibilityError": "Unable to update birthday visibility.",
     "preferences": "Preferences",
     "information": "Information",
     "languageShort": "Language"

@@ -25,6 +25,7 @@ import type { PartyBarPlanningReminder } from "@/lib/party-bar";
 import {
   persistHiddenEventTypeIds,
   persistHideNonParticipating,
+  persistHidePlanningBirthdays,
 } from "@/lib/event-category-filter";
 import type { SerializedEventType } from "@/lib/event-type-helpers";
 import { isBirthdayScheduleEvent } from "@/lib/schedule-birthdays";
@@ -56,6 +57,8 @@ export function ScheduleOverview({
   eventTypes,
   initialHiddenTypeIds,
   initialHideNonParticipating,
+  initialHidePlanningBirthdays,
+  birthdaysOnPlanning,
   associationCalendarUrl,
   startOfDayHour,
   canEditPlanning,
@@ -68,6 +71,8 @@ export function ScheduleOverview({
   eventTypes: SerializedEventType[];
   initialHiddenTypeIds: string[];
   initialHideNonParticipating: boolean;
+  initialHidePlanningBirthdays: boolean;
+  birthdaysOnPlanning: boolean;
   associationCalendarUrl?: string | null;
   startOfDayHour: number;
   canEditPlanning?: boolean;
@@ -92,6 +97,10 @@ export function ScheduleOverview({
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [search, setSearch] = useUrlFilter("q", "");
   const [pastParam, setPastParam] = useUrlFilter("past", "");
+  const [birthdaysParam, setBirthdaysParam] = useUrlFilter(
+    "birthdays",
+    initialHidePlanningBirthdays ? "0" : "",
+  );
   // "?bar=free" (e.g. old links to the Trac bar page) opens on the free bar slots.
   const [barParam, setBarParam] = useUrlFilter("bar", "");
   const hiddenTypeIds = useMemo(
@@ -100,8 +109,13 @@ export function ScheduleOverview({
   );
   const hideNonParticipating = scopeParam === "mine";
   const showPast = pastParam === "1";
+  const showBirthdays = birthdaysParam !== "0";
   const barFilter: BarFilter = barParam === "free" || barParam === "mine" ? barParam : "all";
   const setShowPast = (value: boolean) => setPastParam(value ? "1" : "");
+  const setShowBirthdays = (value: boolean) => {
+    setBirthdaysParam(value ? "" : "0");
+    persistHidePlanningBirthdays(!value);
+  };
   const setBarFilter = (value: BarFilter) => setBarParam(value === "all" ? "" : value);
   const hidden = useMemo(() => new Set(hiddenTypeIds), [hiddenTypeIds]);
   // A bar choice ("my shifts" / "free slots") is a list of its own: "only events I take part in"
@@ -122,6 +136,9 @@ export function ScheduleOverview({
         if (barFilter === "mine" && !event.isBarVolunteer) {
           return false;
         }
+        if (!showBirthdays && isBirthdayScheduleEvent(event)) {
+          return false;
+        }
         if (!barMode) {
           if (hidden.has(event.typeId)) {
             return false;
@@ -133,7 +150,7 @@ export function ScheduleOverview({
         }
         return matchesScheduleSearch(event, search);
       }),
-    [events, barFilter, barMode, hidden, hideNonParticipating, search],
+    [events, barFilter, barMode, hidden, hideNonParticipating, search, showBirthdays],
   );
   // "Next up": your next event (taking part or holding a bar slot), whatever the filters.
   // An event already under way is skipped: the block always points to what comes next.
@@ -146,17 +163,12 @@ export function ScheduleOverview({
         new Date(event.startsAt) > now,
     );
   }, [events]);
-  const exportEvents = useMemo(
-    () => filteredEvents.filter((event) => !isBirthdayScheduleEvent(event)),
-    [filteredEvents],
-  );
-  const listEvents = useMemo(
-    () => filteredEvents.filter((event) => !isBirthdayScheduleEvent(event)),
-    [filteredEvents],
-  );
+  const exportEvents = filteredEvents;
+  const listEvents = filteredEvents;
   const activeFilterCount =
     (barMode ? 1 : hiddenTypeIds.length) +
-    (showPast ? 1 : 0);
+    (showPast ? 1 : 0) +
+    (birthdaysOnPlanning && !showBirthdays ? 1 : 0);
 
   function updateHiddenTypeIds(ids: string[]) {
     setHiddenTypesParam(ids.join(","));
@@ -184,8 +196,11 @@ export function ScheduleOverview({
     if (showPast) {
       parts.push(t("pastEventsShown"));
     }
+    if (birthdaysOnPlanning && !showBirthdays) {
+      parts.push(t("planningBirthdaysHidden"));
+    }
     return parts.join(" · ");
-  }, [barFilter, freeBarSlots, hiddenTypeIds.length, showPast, t]);
+  }, [barFilter, birthdaysOnPlanning, freeBarSlots, hiddenTypeIds.length, showBirthdays, showPast, t]);
 
   // Phones: the search field opens from a button (and stays while it holds text).
   const [searchOpen, setSearchOpen] = useState(false);
@@ -330,6 +345,11 @@ export function ScheduleOverview({
         <FilterCheckbox checked={showPast} onChange={setShowPast}>
           {t("showPastEvents")}
         </FilterCheckbox>
+        {birthdaysOnPlanning && (
+          <FilterCheckbox checked={showBirthdays} onChange={setShowBirthdays}>
+            {t("showPlanningBirthdays")}
+          </FilterCheckbox>
+        )}
         {/* Paused (greyed, values kept) while looking for free bar slots. */}
         <fieldset disabled={barMode} className="transition disabled:opacity-40">
           <EventTypeFilter
@@ -371,7 +391,10 @@ export function ScheduleOverview({
             events={listEvents}
             includePast={showPast}
             categoriesFiltered={
-              activeFilterCount - (showPast ? 1 : 0) > 0 || hideNonParticipating || search.trim() !== ""
+              activeFilterCount -
+                (showPast ? 1 : 0) -
+                (birthdaysOnPlanning && !showBirthdays ? 1 : 0) >
+                0 || hideNonParticipating || search.trim() !== ""
             }
             mineOnly={hideNonParticipating && !barMode && search.trim() === ""}
           />

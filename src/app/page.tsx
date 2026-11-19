@@ -9,8 +9,10 @@ import { associationCalendarFollowUrl } from "@/lib/google-calendar";
 import {
   EVENT_TYPE_FILTER_COOKIE,
   HIDE_NON_PARTICIPATING_COOKIE,
+  HIDE_PLANNING_BIRTHDAYS_COOKIE,
   parseHiddenEventTypeIds,
   parseHideNonParticipating,
+  parseHidePlanningBirthdays,
 } from "@/lib/event-category-filter";
 import { getEventTypes } from "@/lib/event-types";
 import { listPartyBarPlanningReminders } from "@/lib/party-bar";
@@ -26,7 +28,7 @@ import { getServerTranslator } from "@/i18n/server";
 
 async function getUsersWithBirthdays() {
   const users = await prisma.user.findMany({
-    where: { dateOfBirth: { not: null } },
+    where: { dateOfBirth: { not: null }, showBirthdayOnPlanning: true },
     select: { id: true, firstName: true, lastName: true, dateOfBirth: true },
     orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
   });
@@ -176,6 +178,9 @@ export default async function HomePage() {
       hideNonParticipatingCookie === undefined
         ? !admin
         : parseHideNonParticipating(hideNonParticipatingCookie);
+    const hidePlanningBirthdays = parseHidePlanningBirthdays(
+      cookieStore.get(HIDE_PLANNING_BIRTHDAYS_COOKIE)?.value,
+    );
     const birthdayGreeting = settings.showBirthdaysOnPlanning
       ? formatBirthdayGreeting(
           birthdayUsers.filter((birthdayUser) => isBirthdayOnDate(birthdayUser.dateOfBirth, new Date())),
@@ -200,6 +205,8 @@ export default async function HomePage() {
           eventTypes={visibleEventTypes}
           initialHiddenTypeIds={hiddenTypeIds}
           initialHideNonParticipating={hideNonParticipating}
+          initialHidePlanningBirthdays={hidePlanningBirthdays}
+          birthdaysOnPlanning={settings.showBirthdaysOnPlanning}
           associationCalendarUrl={associationCalendarUrl}
           startOfDayHour={settings.startOfDayHour}
           canEditPlanning={admin}

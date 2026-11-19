@@ -67,6 +67,11 @@
     "adminPrivilegesOn": "La planification, les paramètres et les autres outils d’administration sont disponibles.",
     "adminPrivilegesOff": "Vous avez actuellement le même accès qu’un membre.",
     "adminPrivilegesError": "Impossible de mettre à jour les privilèges d’administration.",
+    "birthdayPlanningVisibilityLabel": "Afficher mon anniversaire sur le planning",
+    "birthdayPlanningVisibilityOn": "Les autres membres voient votre anniversaire sur le planning.",
+    "birthdayPlanningVisibilityOff": "Votre anniversaire n’apparaît pas sur le planning.",
+    "birthdayPlanningVisibilityNoDate": "Ajoutez votre date de naissance (via un admin) pour utiliser cette option.",
+    "birthdayPlanningVisibilityError": "Impossible de mettre à jour la visibilité de l’anniversaire.",
     "preferences": "Préférences",
     "information": "Informations",
     "languageShort": "Langue"

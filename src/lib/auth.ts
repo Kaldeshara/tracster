@@ -21,6 +21,7 @@ export type AuthUser = {
   disableSeasonalStyle: boolean;
   adminPrivilegesEnabled: boolean;
   isCompetitor: boolean;
+  showBirthdayOnPlanning: boolean;
 };
 
 function serializeAuthUser(user: {
@@ -35,6 +36,7 @@ function serializeAuthUser(user: {
   disableSeasonalStyle: boolean;
   adminPrivilegesEnabled: boolean;
   isCompetitor: boolean;
+  showBirthdayOnPlanning: boolean;
 }): AuthUser {
   return {
     id: user.id,
@@ -49,6 +51,7 @@ function serializeAuthUser(user: {
     disableSeasonalStyle: user.disableSeasonalStyle,
     adminPrivilegesEnabled: user.adminPrivilegesEnabled,
     isCompetitor: user.isCompetitor,
+    showBirthdayOnPlanning: user.showBirthdayOnPlanning,
   };
 }
 
@@ -106,6 +109,7 @@ async function loadCurrentUser(): Promise<AuthUser | null> {
           disableSeasonalStyle: true,
           adminPrivilegesEnabled: true,
           isCompetitor: true,
+          showBirthdayOnPlanning: true,
         },
       },
     },

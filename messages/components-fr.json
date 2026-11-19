@@ -470,6 +470,8 @@
     "done": "Terminé",
     "createActions": "Créer…",
     "pastEventsShown": "Événements passés affichés",
+    "showPlanningBirthdays": "Afficher les anniversaires",
+    "planningBirthdaysHidden": "Anniversaires masqués",
     "filtersButtonLabel": "{count, plural, =0 {Filtres} one {Filtres (# actif)} other {Filtres (# actifs)}}",
     "help": "Aide",
     "helpFor": "Aide : {title}",

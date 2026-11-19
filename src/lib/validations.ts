@@ -32,6 +32,10 @@ export const competitorStatusSchema = z.object({
   isCompetitor: z.boolean(),
 });
 
+export const birthdayPlanningVisibilitySchema = z.object({
+  showBirthdayOnPlanning: z.boolean(),
+});
+
 export const applyToUpcomingBodySchema = z.object({
   applyToUpcoming: z.boolean().optional(),
 });

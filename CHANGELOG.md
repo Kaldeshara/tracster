@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
+- Account: toggle whether your birthday appears on the planning (Compte → Préférences).
+- Planning filters: **Show birthdays** checkbox (remembered on your device).
 - **Mes vidéos** (Plus menu, and the sidebar on desktops): the pinned videos of every choreography you take part in, in one place, with a filter per choreography.
 - **Bar** tab: organisers can fill a party's free bar slots from its sheet ("Ajouter des bénévoles").
 - **Indispos**: edit a period (pen) as well as delete it (bin), from one bar that opens as soon as a period is created or selected.

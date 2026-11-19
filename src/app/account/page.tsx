@@ -9,6 +9,7 @@ import {
   SeasonalStylePreferenceRow,
 } from "@/components/AccountPreferenceRows";
 import { AdminPrivilegesToggle } from "@/components/AdminPrivilegesToggle";
+import { BirthdayPlanningVisibilityToggle } from "@/components/BirthdayPlanningVisibilityToggle";
 import { CompetitorStatusToggle } from "@/components/CompetitorStatusToggle";
 import { GoogleCalendarConnectionCard } from "@/components/GoogleCalendarConnectionCard";
 import { LogoutButton } from "@/components/LogoutButton";
@@ -79,6 +80,10 @@ export default async function AccountPage({ searchParams }: PageProps) {
               lockedByEnv={isSeasonalStyleDisabledByEnv()}
             />
             <CompetitorStatusToggle userId={user.id} isCompetitor={user.isCompetitor} forSelf variant="row" />
+            <BirthdayPlanningVisibilityToggle
+              showBirthdayOnPlanning={user.showBirthdayOnPlanning}
+              hasDateOfBirth={user.dateOfBirth !== null}
+            />
             {canHoldAdminPrivileges(user.role) && (
               <AdminPrivilegesToggle enabled={user.adminPrivilegesEnabled} variant="row" />
             )}

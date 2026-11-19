@@ -31,6 +31,7 @@ model User {
   disableSeasonalStyle   Boolean          @default(false)
   adminPrivilegesEnabled Boolean          @default(true)
   isCompetitor           Boolean          @default(false)
+  showBirthdayOnPlanning Boolean          @default(true)
   /// Secret of the personal calendar subscription link (ICS feed); null when not enabled.
   calendarFeedToken      String?          @unique
   passwordHash           String
