@@ -101,6 +101,8 @@ export function NextUpCard({
           isToday && "next-up-today",
           strip && "xl:flex xl:items-center xl:gap-8 xl:py-4",
           compact && "max-lg:flex max-lg:items-center max-lg:gap-4 max-lg:p-3 max-lg:px-4",
+          // Compact with an answer (choreography): the answer takes its own row under the line.
+          compact && Boolean(children) && "max-lg:flex-wrap max-lg:gap-y-3 xl:flex-wrap xl:gap-y-3",
         )}
       >
         {/* Seasonal illustration (autumn leaves, christmas snow), set by the frame's theme in CSS. */}
@@ -217,6 +219,7 @@ export function NextUpCard({
             className={cn(
               "mt-4 rounded-xl bg-stone-50 p-3 text-stone-900",
               strip && "xl:mt-0 xl:shrink-0",
+              compact && "max-lg:mt-0 max-lg:basis-full max-lg:p-2 xl:basis-full xl:p-2",
               aboveCardLink,
             )}
           >
