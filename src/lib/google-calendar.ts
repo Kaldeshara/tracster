@@ -300,6 +300,7 @@ export async function saveGoogleConnection(options: {
 const eventInclude = {
   type: { select: { name: true, kind: true } },
   ...listedLocationInclude,
+  participants: { select: { userId: true } },
   choreography: {
     select: {
       title: true,
@@ -334,6 +335,47 @@ function rehearsalAudience(event: SyncEvent) {
       : event.choreography.members.map(({ userId }) => userId)),
   ]);
   return [...ids];
+}
+
+export function demonstrationAudience(event: SyncEvent): string[] {
+  return [...new Set(event.participants.map(({ userId }) => userId))];
+}
+
+export function userCalendarAudience(event: SyncEvent): string[] {
+  if (event.type.kind === "REHEARSAL") {
+    return rehearsalAudience(event);
+  }
+  if (event.type.kind === "DEMONSTRATION") {
+    return demonstrationAudience(event);
+  }
+  return [];
+}
+
+async function syncEventToUserCalendars(event: SyncEvent, userIds: string[]) {
+  const desiredConnections = await prisma.googleCalendarConnection.findMany({
+    where: { kind: "USER", userId: { in: userIds } },
+    include: { user: { select: { displayLanguage: true } } },
+  });
+  const desiredIds = new Set(desiredConnections.map(({ id }) => id));
+  const staleMappings = await prisma.googleCalendarEvent.findMany({
+    where: {
+      eventId: event.id,
+      connection: { kind: "USER" },
+      connectionId: { notIn: [...desiredIds] },
+    },
+    include: { connection: true },
+  });
+  await Promise.all(staleMappings.map(deleteMapping));
+  await Promise.all(
+    desiredConnections.map(async (connection) => {
+      try {
+        await upsertMapping(event, connection);
+        await recordSyncResult(connection.id);
+      } catch (error) {
+        await recordSyncResult(connection.id, error);
+      }
+    }),
+  );
 }
 
 function googleEventPayload(event: SyncEvent, t: ServerTranslator) {
@@ -477,7 +519,9 @@ export async function syncGoogleEvent(eventId: string) {
     return;
   }
 
-  if (eventKindCopiesToAssociationCalendar(event.type.kind)) {
+  const kind = event.type.kind;
+
+  if (eventKindCopiesToAssociationCalendar(kind)) {
     const connection = await prisma.googleCalendarConnection.findUnique({
       where: { id: ASSOCIATION_CONNECTION_ID },
       include: { user: { select: { displayLanguage: true } } },
@@ -491,15 +535,15 @@ export async function syncGoogleEvent(eventId: string) {
         throw error;
       }
     }
-    const userMappings = await prisma.googleCalendarEvent.findMany({
-      where: { eventId, connection: { kind: "USER" } },
-      include: { connection: true },
-    });
-    await Promise.all(userMappings.map(deleteMapping));
-    return;
-  }
-
-  if (event.type.kind !== "REHEARSAL") {
+    if (kind !== "DEMONSTRATION") {
+      const userMappings = await prisma.googleCalendarEvent.findMany({
+        where: { eventId, connection: { kind: "USER" } },
+        include: { connection: true },
+      });
+      await Promise.all(userMappings.map(deleteMapping));
+      return;
+    }
+  } else if (kind !== "REHEARSAL" && kind !== "DEMONSTRATION") {
     const mappings = await prisma.googleCalendarEvent.findMany({
       where: { eventId },
       include: { connection: true },
@@ -508,31 +552,7 @@ export async function syncGoogleEvent(eventId: string) {
     return;
   }
 
-  const userIds = rehearsalAudience(event);
-  const desiredConnections = await prisma.googleCalendarConnection.findMany({
-    where: { kind: "USER", userId: { in: userIds } },
-    include: { user: { select: { displayLanguage: true } } },
-  });
-  const desiredIds = new Set(desiredConnections.map(({ id }) => id));
-  const staleMappings = await prisma.googleCalendarEvent.findMany({
-    where: {
-      eventId,
-      connection: { kind: "USER" },
-      connectionId: { notIn: [...desiredIds] },
-    },
-    include: { connection: true },
-  });
-  await Promise.all(staleMappings.map(deleteMapping));
-  await Promise.all(
-    desiredConnections.map(async (connection) => {
-      try {
-        await upsertMapping(event, connection);
-        await recordSyncResult(connection.id);
-      } catch (error) {
-        await recordSyncResult(connection.id, error);
-      }
-    }),
-  );
+  await syncEventToUserCalendars(event, userCalendarAudience(event));
 }
 
 export async function syncGoogleEventBestEffort(eventId: string) {
@@ -568,19 +588,27 @@ export async function syncGoogleConnection(connectionId: string) {
         : await prisma.event.findMany({
             where: {
               startsAt: { gte: now },
-              type: { kind: "REHEARSAL" },
               OR: [
-                { choreography: { createdById: connection.userId ?? "" } },
                 {
-                  choreography: {
-                    choreographers: { some: { userId: connection.userId ?? "" } },
-                  },
+                  type: { kind: "REHEARSAL" },
+                  OR: [
+                    { choreography: { createdById: connection.userId ?? "" } },
+                    {
+                      choreography: {
+                        choreographers: { some: { userId: connection.userId ?? "" } },
+                      },
+                    },
+                    {
+                      groupId: null,
+                      choreography: { members: { some: { userId: connection.userId ?? "" } } },
+                    },
+                    { group: { members: { some: { userId: connection.userId ?? "" } } } },
+                  ],
                 },
                 {
-                  groupId: null,
-                  choreography: { members: { some: { userId: connection.userId ?? "" } } },
+                  type: { kind: "DEMONSTRATION" },
+                  participants: { some: { userId: connection.userId ?? "" } },
                 },
-                { group: { members: { some: { userId: connection.userId ?? "" } } } },
               ],
             },
             select: { id: true },
