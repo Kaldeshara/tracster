@@ -13,8 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Mes vidéos** (Plus menu, and the sidebar on desktops): the pinned videos of every choreography you take part in, in one place, with a filter per choreography.
 - **Bar** tab: organisers can fill a party's free bar slots from its sheet ("Ajouter des bénévoles").
 - **Indispos**: edit a period (pen) as well as delete it (bin), from one bar that opens as soon as a period is created or selected.
+- **Site**: MOTD management from settings page
 
 ### Changed
+- Message of the day: edited in **Paramètres → Paramètres du site** (top of the form) instead of the `MOTD` environment variable.
 - Choreographies: one control row like the planning's (on phones Les miennes / Toutes, a search button and the filters; the representation filter moves to the filter sheet).
 - Choreography overview: the next rehearsal is the planning's compact card, with the planning's Dispo / Indispo / Peut-être switch inside it; the next performance moves to the Events card.
 - Choreography resources: the Spotify song comes first as a compact player (no pin button: it already leads the resources, and it no longer shows among pinned resources), then the videos, then the other resources (two per row on large screens).

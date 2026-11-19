@@ -4,11 +4,17 @@ import { useTranslations } from "next-intl";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card, FormActions, FormError, Label, Select, ToggleRow } from "@/components/ui";
+import { Button, Card, FormActions, FormError, Label, Select, Textarea, ToggleRow } from "@/components/ui";
 import { HOURS_24 } from "@/lib/datetime";
 import type { SiteSettingsRecord } from "@/lib/site-settings";
 
-export function SiteSettingsForm({ settings }: { settings: SiteSettingsRecord }) {
+export function SiteSettingsForm({
+  settings,
+  initialMessageOfTheDay = "",
+}: {
+  settings: SiteSettingsRecord;
+  initialMessageOfTheDay?: string;
+}) {
   const t = useTranslations("Components");
   const router = useRouter();
   const [allowUserCreateChoreographies, setAllowUserCreateChoreographies] = useState(
@@ -21,6 +27,7 @@ export function SiteSettingsForm({ settings }: { settings: SiteSettingsRecord })
   const [showBirthdaysOnPlanning, setShowBirthdaysOnPlanning] = useState(
     settings.showBirthdaysOnPlanning,
   );
+  const [messageOfTheDay, setMessageOfTheDay] = useState(initialMessageOfTheDay);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -40,6 +47,7 @@ export function SiteSettingsForm({ settings }: { settings: SiteSettingsRecord })
         startOfDayHour: Number(startOfDayHour),
         showBirthdaysOnPlanning,
         showChoreographyTags: settings.showChoreographyTags,
+        messageOfTheDay,
       }),
     });
     const data = await response.json();
@@ -58,6 +66,18 @@ export function SiteSettingsForm({ settings }: { settings: SiteSettingsRecord })
     <Card className="max-w-xl">
       <h2 className="max-lg:sr-only mb-4 text-lg font-semibold">{t("siteSettings")}</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <Label htmlFor="message-of-the-day">{t("messageOfTheDay")}</Label>
+          <Textarea
+            id="message-of-the-day"
+            className="mt-1 min-h-24"
+            value={messageOfTheDay}
+            onChange={(event) => setMessageOfTheDay(event.target.value)}
+            placeholder={t("messageOfTheDayPlaceholder")}
+            maxLength={2000}
+          />
+          <p className="mt-1 text-sm text-stone-500">{t("messageOfTheDayHelp")}</p>
+        </div>
         <ToggleRow
           label={t("allowCreateChoreographies")}
           hint={t("createChoreographiesHelp")}

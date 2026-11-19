@@ -237,6 +237,13 @@ model SiteSettings {
   updatedAt                     DateTime @updatedAt
 }
 
+/// Site-wide banner text (one row, id `default`).
+model SiteMotd {
+  id        String   @id
+  message   String   @default("")
+  updatedAt DateTime @updatedAt
+}
+
 enum GoogleCalendarConnectionKind {
   ASSOCIATION
   USER

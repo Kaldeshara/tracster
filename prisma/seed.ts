@@ -198,6 +198,15 @@ async function main() {
     },
   });
 
+  await prisma.siteMotd.upsert({
+    where: { id: "default" },
+    update: {},
+    create: {
+      id: "default",
+      message: process.env.MOTD?.trim() ?? "",
+    },
+  });
+
   const studioA = await prisma.location.upsert({
     where: { name: "Studio A" },
     update: {},

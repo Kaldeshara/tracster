@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { forbidden, jsonError, unauthorized } from "@/lib/api";
 import { canManageSettings } from "@/lib/roles";
+import { SITE_MOTD_ID, getSiteMotdMessage } from "@/lib/motd";
 import {
   getSiteSettings,
   serializeSiteSettings,
@@ -16,8 +17,11 @@ export async function GET() {
     return unauthorized();
   }
 
-  const settings = await getSiteSettings();
-  return Response.json({ settings });
+  const [settings, messageOfTheDay] = await Promise.all([
+    getSiteSettings(),
+    getSiteMotdMessage(),
+  ]);
+  return Response.json({ settings, messageOfTheDay });
 }
 
 export async function PATCH(request: NextRequest) {
@@ -36,14 +40,31 @@ export async function PATCH(request: NextRequest) {
     return jsonError(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
 
-  const settings = await prisma.siteSettings.upsert({
-    where: { id: SITE_SETTINGS_ID },
-    create: {
-      id: SITE_SETTINGS_ID,
-      ...parsed.data,
-    },
-    update: parsed.data,
+  const { messageOfTheDay, ...siteFields } = parsed.data;
+  const settings = await prisma.$transaction(async (tx) => {
+    const updated = await tx.siteSettings.upsert({
+      where: { id: SITE_SETTINGS_ID },
+      create: {
+        id: SITE_SETTINGS_ID,
+        ...siteFields,
+      },
+      update: siteFields,
+    });
+    if (messageOfTheDay !== undefined) {
+      const trimmed = messageOfTheDay.trim();
+      await tx.siteMotd.upsert({
+        where: { id: SITE_MOTD_ID },
+        create: { id: SITE_MOTD_ID, message: trimmed },
+        update: { message: trimmed },
+      });
+    }
+    return updated;
   });
 
-  return Response.json({ settings: serializeSiteSettings(settings) });
+  const motd =
+    messageOfTheDay !== undefined ? messageOfTheDay.trim() : await getSiteMotdMessage();
+  return Response.json({
+    settings: serializeSiteSettings(settings),
+    messageOfTheDay: motd,
+  });
 }

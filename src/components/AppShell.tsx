@@ -134,7 +134,7 @@ export async function AppShell({
   fillHeight?: boolean;
 }) {
   const user = await getCurrentUser();
-  const messageOfTheDay = getMessageOfTheDay();
+  const messageOfTheDay = await getMessageOfTheDay();
 
   return (
     // Only tab changes animate (bottom bar tap or swipe, tagged in BottomTabBar); other

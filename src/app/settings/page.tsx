@@ -13,6 +13,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { canManageAssociationGoogleCalendar, canManageSettings } from "@/lib/roles";
 import { getEventTypes } from "@/lib/event-types";
+import { getSiteMotdMessage } from "@/lib/motd";
 import { getSiteSettings } from "@/lib/site-settings";
 import { adminUserSelect, serializeAdminUser, userNameOrderBy } from "@/lib/users";
 import {
@@ -42,13 +43,14 @@ export default async function SettingsPage({ searchParams }: PageProps) {
 
   const showAssociationCalendar = await canManageAssociationGoogleCalendar(user.id);
 
-  const [locations, settings, users, representations, eventTypes, tags, googleConnection, query] =
+  const [locations, settings, messageOfTheDay, users, representations, eventTypes, tags, googleConnection, query] =
     await Promise.all([
     prisma.location.findMany({
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
     getSiteSettings(),
+    getSiteMotdMessage(),
     prisma.user.findMany({
       orderBy: userNameOrderBy,
       select: adminUserSelect,
@@ -75,7 +77,9 @@ export default async function SettingsPage({ searchParams }: PageProps) {
     {
       id: "general",
       label: tc("siteSettings"),
-      content: <SiteSettingsForm settings={settings} />,
+      content: (
+        <SiteSettingsForm settings={settings} initialMessageOfTheDay={messageOfTheDay} />
+      ),
     },
     ...(showAssociationCalendar
       ? [

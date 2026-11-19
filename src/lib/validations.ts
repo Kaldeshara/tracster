@@ -158,6 +158,7 @@ export const siteSettingsSchema = z.object({
   startOfDayHour: z.number().int().min(0).max(23),
   showBirthdaysOnPlanning: z.boolean(),
   showChoreographyTags: z.boolean(),
+  messageOfTheDay: z.string().max(2000).optional(),
 });
 
 export const rehearsalSchema = z.object({
